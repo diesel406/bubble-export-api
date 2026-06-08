@@ -60,6 +60,12 @@ def fetch_all_records(data_type):
 # -----------------------------
 # GENERATE EXPORT
 # -----------------------------
+@app.get("/debug-env")
+def debug_env():
+    return {
+        "base_url": BUBBLE_BASE_URL,
+        "token_exists": BUBBLE_API_TOKEN is not None
+    }
 @app.post("/generate-export")
 async def generate_export():
 
