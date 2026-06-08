@@ -115,3 +115,19 @@ def get_file(filename: str):
         filename=filename,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+@app.get("/test-bubble")
+def test_bubble():
+
+    headers = {
+        "Authorization": f"Bearer {BUBBLE_API_TOKEN}"
+    }
+
+    response = requests.get(
+        f"{BUBBLE_BASE_URL}/ServiceRequest",
+        headers=headers
+    )
+
+    return {
+        "status_code": response.status_code,
+        "text": response.text[:500]
+    }
