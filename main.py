@@ -10,15 +10,17 @@ app = FastAPI()
 # -----------------------------
 # BUBBLE CONFIG
 # -----------------------------
-BUBBLE_BASE_URL = os.getenv("BUBBLE_BASE_URL")
+BUBBLE_BASE_URL = os.getenv("BUBBLE_BASE_URL")  # MUST end in /obj
 BUBBLE_API_TOKEN = os.getenv("BUBBLE_API_TOKEN")
+
 print("BASE URL:", BUBBLE_BASE_URL)
 print("TOKEN EXISTS:", BUBBLE_API_TOKEN is not None)
 
+# IMPORTANT: Bubble Data API types (must match your Bubble exactly)
 DATA_TYPES = [
-    "User",
-    "ServiceRequest",
-    "DriverApplication"
+    "user",
+    "servicerequest",
+    "driverapplication"
 ]
 
 # -----------------------------
@@ -26,25 +28,25 @@ DATA_TYPES = [
 # -----------------------------
 def fetch_all_records(data_type):
     headers = {
-        "Authorization": f"Bearer {BUBBLE_API_TOKEN}"
+        "Authorization": f"Bearer {BUBBLE_API_TOKEN}",
+        "Content-Type": "application/json"
     }
 
     results = []
     cursor = 0
 
     while True:
-
         response = requests.get(
             f"{BUBBLE_BASE_URL}/{data_type}",
             headers=headers,
             params={"cursor": cursor}
         )
 
-        response.raise_for_status()
+        if response.status_code != 200:
+            raise Exception(f"{data_type} failed: {response.text}")
 
-        payload = response.json()["response"]
-
-        records = payload["results"]
+        payload = response.json().get("response", {})
+        records = payload.get("results", [])
 
         results.extend(records)
 
@@ -53,12 +55,13 @@ def fetch_all_records(data_type):
         if remaining == 0:
             break
 
-        cursor += len(records)
+        # safer pagination
+        cursor = payload.get("cursor", cursor + len(records))
 
     return results
 
 # -----------------------------
-# GENERATE EXPORT
+# DEBUG ENDPOINT
 # -----------------------------
 @app.get("/debug-env")
 def debug_env():
@@ -66,6 +69,10 @@ def debug_env():
         "base_url": BUBBLE_BASE_URL,
         "token_exists": BUBBLE_API_TOKEN is not None
     }
+
+# -----------------------------
+# GENERATE EXPORT
+# -----------------------------
 @app.post("/generate-export")
 async def generate_export():
 
@@ -81,12 +88,12 @@ async def generate_export():
             try:
                 records = fetch_all_records(data_type)
 
-                if records:
-                    pd.DataFrame(records).to_excel(
-                        writer,
-                        sheet_name=data_type[:31],
-                        index=False
-                    )
+                if records and len(records) > 0:
+                    df = pd.DataFrame(records)
+                else:
+                    df = pd.DataFrame([{"empty": True}])
+
+                df.to_excel(writer, sheet_name=data_type[:31], index=False)
 
             except Exception as e:
                 pd.DataFrame([
@@ -99,7 +106,7 @@ async def generate_export():
 
     return {
         "success": True,
-        "file_url": f"https://web-production-6d634.up.railway.app/files/{filename}"
+        "file_url": f"/files/{filename}"
     }
 
 # -----------------------------
@@ -110,11 +117,18 @@ def get_file(filename: str):
 
     file_path = f"exports/{filename}"
 
+    if not os.path.exists(file_path):
+        return {"error": "file not found"}
+
     return FileResponse(
         path=file_path,
         filename=filename,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+# -----------------------------
+# TEST BUBBLE CONNECTION
+# -----------------------------
 @app.get("/test-bubble")
 def test_bubble():
 
@@ -123,7 +137,7 @@ def test_bubble():
     }
 
     response = requests.get(
-        f"{BUBBLE_BASE_URL}/ServiceRequest",
+        f"{BUBBLE_BASE_URL}/servicerequest",
         headers=headers
     )
 
