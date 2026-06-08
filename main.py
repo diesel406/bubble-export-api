@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 import pandas as pd
 from datetime import datetime
 
@@ -21,8 +22,8 @@ async def generate_export(data: dict):
                 index=False
             )
 
-    return {
-  "success": true,
-  "file_url": "https://.../download/export_1780893151.xlsx"
-}
-    }
+    return FileResponse(
+        path=filename,
+        filename=filename,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
