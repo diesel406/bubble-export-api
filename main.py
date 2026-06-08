@@ -12,6 +12,8 @@ app = FastAPI()
 # -----------------------------
 BUBBLE_BASE_URL = os.getenv("BUBBLE_BASE_URL")
 BUBBLE_API_TOKEN = os.getenv("BUBBLE_API_TOKEN")
+print("BASE URL:", BUBBLE_BASE_URL)
+print("TOKEN EXISTS:", BUBBLE_API_TOKEN is not None)
 
 DATA_TYPES = [
     "User",
