@@ -22,6 +22,7 @@ async def generate_export(data: dict):
             )
 
     return {
-        "success": True,
-        "filename": filename
+  "success": true,
+  "file_url": "https://.../download/export_1780893151.xlsx"
+}
     }
