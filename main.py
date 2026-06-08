@@ -1,20 +1,19 @@
-from fastapi import FastAPI
 from fastapi.responses import FileResponse
-import pandas as pd
+import os
 from datetime import datetime
-
-app = FastAPI()
-
-@app.get("/")
-def root():
-    return {"status": "running"}
+import pandas as pd
 
 @app.post("/generate-export")
 async def generate_export(data: dict):
 
     filename = f"export_{int(datetime.now().timestamp())}.xlsx"
+    file_path = f"exports/{filename}"
 
-    with pd.ExcelWriter(filename, engine="openpyxl") as writer:
+    # make sure folder exists
+    os.makedirs("exports", exist_ok=True)
+
+    # create excel file
+    with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
         for sheet_name, records in data.items():
             pd.DataFrame(records).to_excel(
                 writer,
@@ -22,8 +21,7 @@ async def generate_export(data: dict):
                 index=False
             )
 
-    return FileResponse(
-        path=filename,
-        filename=filename,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    return {
+        "success": True,
+        "file_url": f"https://web-production-6d634.up.railway.app/files/{filename}"
+    }
